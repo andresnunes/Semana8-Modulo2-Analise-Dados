@@ -9,20 +9,20 @@
 
 x-airflow-comum: &airflow-comum
   image: apache/airflow:3.3.2
-  environment: &airflow-comum-env
+  environment: &airflow-comum-env # Padrão para execução local, muda de acordo com o ambiente
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     # login fixo airflow/airflow (sem isso o Airflow 3 sorteia uma senha)
     AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
     # no Airflow 3 as tasks falam com o api-server; entre containers "localhost" não serve
     AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://airflow-api-server:8080/execution/"
-    AIRFLOW__API_AUTH__JWT_SECRET: "segredo-apenas-para-estudo-local"
+    AIRFLOW__API_AUTH__JWT_SECRET: "segredo-apenas-para-estudo-local" # Chave JWT, que é secreta em ambientes cloud
     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true" # valida se o container executou com sucesso
     AIRFLOW__CORE__FERNET_KEY: ""
     PYTHONDONTWRITEBYTECODE: "1"
-  volumes:
-    - ./dags:/opt/airflow/dags
+  volumes: # Caminho para o meu código local
+    - ./dags:/opt/airflow/dags # pasta da máquina : pasta do container
     - ./logs:/opt/airflow/logs
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on: &airflow-comum-depends-on
@@ -45,6 +45,7 @@ services:
       start_period: 5s
     restart: unless-stopped
 
+# primeiro serviço a ser executado pelo airflow
   airflow-init:
     <<: *airflow-comum
     entrypoint: /bin/bash
