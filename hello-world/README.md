@@ -26,7 +26,7 @@ docker compose version
 ### 1. Entre na pasta
 
 ```bash
-cd caminho/para/exemplo2
+cd caminho/para/hello-world
 ```
 
 ### 2. Prepare o banco e o usuário (só na primeira vez)
