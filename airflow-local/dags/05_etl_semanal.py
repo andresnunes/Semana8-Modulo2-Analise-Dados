@@ -24,17 +24,22 @@ def inicio_da_semana(momento) -> pd.Timestamp:
     return dia - pd.Timedelta(days=dia.weekday())
 
 
+# Decorator que define um método como o configurador da DAG
+# É um script airflow, não uma função padrão
 @dag(
     dag_id="05_etl_semanal",
     description="ETL semanal de vendas a partir de um CSV local",
-    schedule="0 0 * * 1",
+    schedule="0 0 * * 1", # CRON de execução a 1 da manhã
     start_date=pendulum.datetime(2026, 7, 6, tz="America/Sao_Paulo"),
-    catchup=False,
+    catchup=False, # Não tenta executar o "passado"
     tags=["desafio", "etl"],
     default_args={"retries": 1, "retry_delay": timedelta(minutes=1)},
+    # Argumentos padrão para a DAG
 )
 def etl_semanal():
-    @task
+    @task # task do Airflow
+    # ela coloca no XCom uma lista de dicionários
+    # não use Dataframe como retorno de task no airflow
     def extrair(logical_date=None) -> list[dict]:
         df = pd.read_csv(CSV_ENTRADA, parse_dates=["data"])
 

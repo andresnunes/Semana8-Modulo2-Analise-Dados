@@ -1,3 +1,6 @@
+# vesões que esse código do terraform usa
+# Versão to Terraform em si
+# Versão do plugin da AWS no TF
 terraform {
   required_version = ">= 1.6"
 

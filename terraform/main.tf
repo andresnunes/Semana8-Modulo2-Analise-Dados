@@ -7,6 +7,8 @@
 
 data "aws_caller_identity" "atual" {}
 
+# pode ser um arquivo separados
+# define valores para as variáveis do variables
 locals {
   buckets = {
     raw     = "${var.prefixo}-vendas-raw"
@@ -35,10 +37,11 @@ resource "aws_s3_bucket" "dados" {
   for_each = local.buckets
 
   bucket        = each.value
-  force_destroy = true
+  force_destroy = true # deletar o tf deleta o bucket
   tags          = local.etiquetas
 }
 
+# regras de acesso para o bucket criado anteriormente
 resource "aws_s3_bucket_public_access_block" "dados" {
   for_each = aws_s3_bucket.dados
 
@@ -126,16 +129,17 @@ resource "aws_iam_user" "airflow" {
   force_destroy = true
   tags          = local.etiquetas
 }
-
+# permissões que o airflow vai ter dentro da AWS
 data "aws_iam_policy_document" "airflow" {
   statement {
     sid     = "Buckets"
     actions = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket", "s3:GetBucketLocation"]
     resources = flatten([
-      for bucket in aws_s3_bucket.dados : [bucket.arn, "${bucket.arn}/*"]
-    ])
+      for bucket in aws_s3_bucket.dados : [bucket.arn, "${bucket.arn}/*"] # lista os buckets criados nesse terraform
+    ]) 
   }
 
+# adicionar o acesso ao Glue para o airflow
   statement {
     sid = "Glue"
     actions = [
@@ -146,6 +150,7 @@ data "aws_iam_policy_document" "airflow" {
     resources = ["*"]
   }
 
+# adicionar o acesso ao Athena para o airflow
   statement {
     sid = "Athena"
     actions = [
@@ -164,12 +169,14 @@ data "aws_iam_policy_document" "airflow" {
   }
 }
 
+# politica do airflow
 resource "aws_iam_user_policy" "airflow" {
   name   = "AirflowEtlVendas"
   user   = aws_iam_user.airflow.name
   policy = data.aws_iam_policy_document.airflow.json
 }
 
+# chave de acesso do airflow
 resource "aws_iam_access_key" "airflow" {
   user = aws_iam_user.airflow.name
 }

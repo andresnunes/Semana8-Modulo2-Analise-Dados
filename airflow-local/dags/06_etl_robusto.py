@@ -26,7 +26,7 @@ def inicio_da_semana(momento) -> pd.Timestamp:
     dia = pd.Timestamp(momento.date())
     return dia - pd.Timedelta(days=dia.weekday())
 
-
+# essa função é externa a DAG
 def preparar(linhas: list[dict]) -> pd.DataFrame:
     df = pd.DataFrame(linhas, columns=COLUNAS)
     df["quantidade"] = pd.to_numeric(df["quantidade"], errors="coerce")
@@ -47,6 +47,7 @@ def preparar(linhas: list[dict]) -> pd.DataFrame:
     default_args={"retries": 2, "retry_delay": timedelta(seconds=30)},
 )
 def etl_robusto():
+    # Ela sobreescreve o padrão de retries e retry_delay
     @task(retries=3, retry_delay=timedelta(seconds=10))
     def validar_fonte() -> int:
         if not CSV_ENTRADA.exists():
@@ -72,7 +73,7 @@ def etl_robusto():
         print(f"Janela {inicio.date()} ate {fim.date()}: {len(janela)} linhas")
         return janela.astype(object).where(pd.notna(janela), None).to_dict("records")
 
-    @task.branch
+    @task.branch # Cria um paralelismos de tarefa
     def decidir_volume(linhas: list[dict]) -> str:
         if len(linhas) >= LIMITE_PARA_LOTES:
             print(f"{len(linhas)} linhas (>= {LIMITE_PARA_LOTES}): processando em lotes")
@@ -81,6 +82,9 @@ def etl_robusto():
         print(f"{len(linhas)} linhas (< {LIMITE_PARA_LOTES}): processando de uma vez")
         return "processar_simples"
 
+# Duas tarefas que podem ou não acontecer
+# será uma ou a outra
+# As 3 tarefas a seguir tem caminhos diferentes para executar
     @task
     def dividir_em_lotes(linhas: list[dict]) -> list[list[dict]]:
         categorias = sorted({linha["categoria"] for linha in linhas})
@@ -111,7 +115,9 @@ def etl_robusto():
 
         print(f"semana inteira: {len(limpo)} linhas | R$ {receita:,.2f}")
         return {"linhas": len(limpo), "receita": receita, "categorias": categorias}
-
+    
+# espera um resultado das tarefas anteriores
+#   nenhuma tarefa falhou e temos pelo menos uma tarefa com sucesso
     @task(trigger_rule="none_failed_min_one_success")
     def consolidar() -> dict:
         ti = get_current_context()["ti"]
@@ -136,13 +142,13 @@ def etl_robusto():
     dados = extrair()
     validar_fonte() >> dados
 
-    escolha = decidir_volume(dados)
+    escolha = decidir_volume(dados) # define a tarefa a ser executada
     lotes = dividir_em_lotes(dados)
     simples = processar_simples(dados)
     escolha >> [lotes, simples]
 
     mapeadas = processar_lote.expand(lote=lotes)
-    [mapeadas, simples] >> consolidar()
+    [mapeadas, simples] >> consolidar() # O resultado é que ou mapeadas, ou simples deu sucesso
 
 
 etl_robusto()

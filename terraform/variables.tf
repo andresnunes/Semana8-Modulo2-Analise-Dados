@@ -1,3 +1,5 @@
+# Define as variáveis para o Terraforms utilizar
+
 variable "prefixo" {
   description = "Prefixo dos nomes de bucket. Nomes de bucket sao globais na AWS inteira, entao use algo seu."
   type        = string

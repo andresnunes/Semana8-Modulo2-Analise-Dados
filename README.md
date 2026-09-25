@@ -2,6 +2,19 @@
 
 Airflow 3 aplicado a ETL, orquestração e AWS. Três stacks Docker independentes, todas locais.
 
+
+## Ordem de estudos:
+
+1. Slides
+2. hello-world desse repo
+3. airflow-local - complementa o hello e exemplifica os slides
+4. Docs do MWAA da AWS - https://docs.aws.amazon.com/pt_br/mwaa/latest/userguide/get-started.html
+5. airflow-aws - exemplifica uma execução da AWS
+6. terraform - pode ser executado, com cautela para não gerar gastos
+7. tests - pesquisa sobre pytest (OPCIONAL)
+
+## Listagem de pastas
+
 | Pasta | Porta | O que é |
 |---|---|---|
 | [`hello-world/`](hello-world/) | 8081 | Material das aulas 1 e 2 |
