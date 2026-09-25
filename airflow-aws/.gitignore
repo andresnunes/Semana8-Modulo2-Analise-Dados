@@ -1,0 +1,7 @@
+logs/*
+!logs/.gitkeep
+__pycache__/
+*.pyc
+
+# nunca versionar credenciais reais da AWS
+.env.aws

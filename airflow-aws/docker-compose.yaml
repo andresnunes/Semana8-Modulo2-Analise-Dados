@@ -1,36 +1,49 @@
 # ---------------------------------------------------------------------------
-# Airflow 3 mínimo, só para rodar o DAG 01_ola_airflow.
-# Postgres (metadados) + LocalExecutor, imagem oficial sem build.
+# Stack AWS: Airflow 3 + Postgres + LocalExecutor + LocalStack (S3).
 #
-#   docker compose up airflow-init   # 1ª vez: cria banco e usuário
-#   docker compose up -d             # sobe o Airflow
-#   http://localhost:8080            # login: airflow / senha: airflow
+#   docker compose build
+#   docker compose up airflow-init
+#   docker compose --profile local up -d   # com LocalStack  (DAG 10)
+#   docker compose up -d                   # contra AWS real (DAG 11)
+#   http://localhost:8082                  # login: airflow / senha: airflow
+#
+# A porta sai de AIRFLOW_PORT no .env: se 8082 estiver ocupada, troque la.
+#
+# O perfil "local" existe para que o LocalStack NAO suba quando o alvo e a AWS
+# de verdade. Qual backend o Airflow usa depende do AIRFLOW_CONN_AWS_DEFAULT
+# definido no .env, nao do compose.
 # ---------------------------------------------------------------------------
 
 x-airflow-comum: &airflow-comum
-  image: apache/airflow:3.3.2
-  environment: &airflow-comum-env # Padrão para execução local, muda de acordo com o ambiente
+  image: airflow-aws:3.3.2
+  environment: &airflow-comum-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-    # login fixo airflow/airflow (sem isso o Airflow 3 sorteia uma senha)
     AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
-    # no Airflow 3 as tasks falam com o api-server; entre containers "localhost" não serve
     AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://airflow-api-server:8080/execution/"
-    AIRFLOW__API_AUTH__JWT_SECRET: "segredo-apenas-para-estudo-local" # Chave JWT, que é secreta em ambientes cloud
+    AIRFLOW__API_AUTH__JWT_SECRET: "segredo-apenas-para-estudo-local"
     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true" # valida se o container executou com sucesso
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
     AIRFLOW__CORE__FERNET_KEY: ""
     PYTHONDONTWRITEBYTECODE: "1"
-  volumes: # Caminho para o meu código local
-    - ./dags:/opt/airflow/dags # pasta da máquina : pasta do container
+    AIRFLOW_CONN_AWS_DEFAULT: ${AIRFLOW_CONN_AWS_DEFAULT}
+    BUCKET_RAW: ${BUCKET_RAW:-vendas-raw}
+    BUCKET_CURATED: ${BUCKET_CURATED:-vendas-curated}
+    BUCKET_ATHENA: ${BUCKET_ATHENA:-athena-results}
+    GLUE_DATABASE: ${GLUE_DATABASE:-vendas_db}
+    GLUE_CRAWLER: ${GLUE_CRAWLER:-vendas-crawler}
+    GLUE_ROLE: ${GLUE_ROLE:-}
+  volumes:
+    - ./dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
+    - ./data:/opt/airflow/data:ro
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on: &airflow-comum-depends-on
     postgres:
       condition: service_healthy
 
 services:
-  postgres: # Banco de métadados do Postgres
+  postgres:
     image: postgres:16
     environment:
       POSTGRES_USER: airflow
@@ -45,9 +58,29 @@ services:
       start_period: 5s
     restart: unless-stopped
 
-# primeiro serviço a ser executado pelo airflow
+  # So sobe com --profile local. Community Edition: emula S3 (nao emula Glue/Athena).
+  localstack:
+    image: localstack/localstack:4
+    profiles: ["local"]
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: s3
+      DEBUG: "0"
+    volumes:
+      - ./localstack-init:/etc/localstack/init/ready.d
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:4566/_localstack/health | grep -q available"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+  # unico servico com "build": os demais reusam a tag airflow-aws:3.3.2.
   airflow-init:
     <<: *airflow-comum
+    build: .
     entrypoint: /bin/bash
     command:
       - -c
@@ -68,7 +101,7 @@ services:
     <<: *airflow-comum
     command: api-server
     ports:
-      - "8080:8080"
+      - "${AIRFLOW_PORT:-8082}:8080"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/monitor/health"]
       interval: 30s

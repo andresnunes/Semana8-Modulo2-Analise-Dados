@@ -1,0 +1,9 @@
+# Dependencias para rodar lint e testes fora do Docker (usado pelo CI).
+# As versoes acompanham as imagens das duas stacks.
+apache-airflow==3.3.2
+apache-airflow-providers-amazon==9.17.0
+pandas==2.3.3
+pyarrow==21.0.0
+duckdb==1.4.1
+pytest==8.4.2
+ruff==0.14.0

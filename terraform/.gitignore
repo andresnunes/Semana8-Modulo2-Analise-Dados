@@ -1,0 +1,10 @@
+# O state guarda a secret key do usuario IAM em texto puro.
+# Nunca versione estes arquivos.
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Pode conter o seu prefixo e outros valores pessoais.
+*.tfvars
+!exemplo.tfvars
