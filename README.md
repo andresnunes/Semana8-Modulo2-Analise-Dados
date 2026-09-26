@@ -10,6 +10,7 @@ Airflow 3 aplicado a ETL, orquestração e AWS. Três stacks Docker independente
 3. airflow-local - complementa o hello e exemplifica os slides
 4. Docs do MWAA da AWS - https://docs.aws.amazon.com/pt_br/mwaa/latest/userguide/get-started.html
 5. airflow-aws - exemplifica uma execução da AWS
+   1. https://docs.localstack.cloud/aws/ - LocalStack
 6. terraform - pode ser executado, com cautela para não gerar gastos
 7. tests - pesquisa sobre pytest (OPCIONAL)
 

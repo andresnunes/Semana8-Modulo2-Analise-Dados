@@ -61,7 +61,7 @@ services:
   # So sobe com --profile local. Community Edition: emula S3 (nao emula Glue/Athena).
   localstack:
     image: localstack/localstack:4
-    profiles: ["local"]
+    profiles: ["local"] # exige o -profile local para que a imagem do localStack seja executada em um container
     ports:
       - "4566:4566"
     environment:

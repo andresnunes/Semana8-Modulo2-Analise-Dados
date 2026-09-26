@@ -93,6 +93,7 @@ def s3_glue_athena():
         print(f"gravado: s3://{BUCKET_CURATED}/{CHAVE_CURATED} ({len(limpo)} linhas)")
         return CHAVE_CURATED
 
+    # Task
     rodar_crawler = GlueCrawlerOperator(
         task_id="rodar_crawler",
         aws_conn_id="aws_default",
@@ -105,6 +106,7 @@ def s3_glue_athena():
         },
     )
 
+    # Task
     consultar_athena = AthenaOperator(
         task_id="consultar_athena",
         aws_conn_id="aws_default",
